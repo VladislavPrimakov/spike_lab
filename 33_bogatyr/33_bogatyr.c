@@ -328,7 +328,6 @@ void unlink_mq() {
 
 int main(int argc, char* argv[]) {
 	while (1) {
-		int this_option_optind=optind ? optind : 1;
 		int option_index=0;
 		static struct option long_options[]={
 			{"log-level", required_argument, 0, 'l'},
@@ -349,17 +348,36 @@ int main(int argc, char* argv[]) {
 		num_workers=atoi(optarg);
 		break;
 		case 'f':
-		int fd=open(optarg, O_RDONLY);
-		if (fd<0) {
-			perror(optarg);
-			return -1;
+		{
+			int fd=open(optarg, O_RDONLY);
+			if (fd<0) {
+				perror(optarg);
+				return -1;
+			}
+			struct stat st;
+			if (fstat(fd, &st)<0) {
+				perror("fstat");
+				close(fd);
+				return -1;
+			}
+			song=malloc(st.st_size+1);
+			if (!song) {
+				perror("malloc");
+				close(fd);
+				return -1;
+			}
+			ssize_t bytes_read=read(fd, song, st.st_size);
+			if (bytes_read<0) {
+				perror("read");
+				free(song);
+				close(fd);
+				return -1;
+			}
+			song[bytes_read]='\0';
+			close(fd);
+			break;
 		}
-		struct stat st;
-		fstat(fd, &st);
-		song=malloc(st.st_size);
-		read(fd, song, st.st_size);
-		close(fd);
-		break;
+
 		case 'h':
 		fprintf(stderr, "Usage: %s [options]\n", argv[0]);
 		fprintf(stderr, "\t-l, --log-level,\t\tverbose level [0-3]\n");
@@ -367,8 +385,9 @@ int main(int argc, char* argv[]) {
 		fprintf(stderr, "\t-f, --input-file,\t\tinput file\n");
 		fprintf(stderr, "\t-h, --help,\t\tdisplay with help\n");
 		exit(0);
+
 		case '?':
-		fprintf(stderr, "Invalid option");
+		fprintf(stderr, "Invalid option\n");
 		exit(1);
 		}
 	}
