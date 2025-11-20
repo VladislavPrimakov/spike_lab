@@ -32,7 +32,7 @@ public:
 };
 
 class Work {
-	static pthread_mutex_t lock;
+	static pthread_mutex_t general_lock;
 	static pthread_cond_t cond;
 	static pthread_cond_t cond_operations;
 	static std::size_t current_detail_idx;
@@ -48,7 +48,7 @@ public:
 	static void Init(const std::vector<std::shared_ptr<Detail>>& d, std::size_t n_d) {
 		details=d;
 		num_details=n_d;
-		pthread_mutex_init(&lock, NULL);
+		pthread_mutex_init(&general_lock, NULL);
 		pthread_cond_init(&cond, NULL);
 		pthread_cond_init(&cond_operations, NULL);
 
@@ -73,7 +73,7 @@ public:
 		}
 		if (d->workers_started<d->details_needed) {
 			started_operations_per_detail++;
-			pthread_mutex_unlock(&lock);
+			pthread_mutex_unlock(&general_lock);
 			d->workers_started++;
 			std::println("Worker {} took [{}] for {} ({}/{})", worker_id, d->s_tool, d->s_detail, d->workers_started, d->details_needed);
 			pthread_mutex_unlock(&d->lock);
@@ -96,16 +96,16 @@ public:
 
 	void run_work_loop() {
 		while (true) {
-			pthread_mutex_lock(&lock);
+			pthread_mutex_lock(&general_lock);
 			// end work
 			if (current_detail_idx>=num_details) {
-				pthread_mutex_unlock(&lock);
+				pthread_mutex_unlock(&general_lock);
 				break;
 			}
 			for (auto& d:details) {
 				// if return true, unlocked (lock). else locked (lock)
 				if (try_work(d)) {
-					pthread_mutex_lock(&lock);
+					pthread_mutex_lock(&general_lock);
 					finished_operations_per_detail++;
 					pthread_cond_broadcast(&cond_operations);
 					break;
@@ -114,7 +114,7 @@ public:
 			if (started_operations_per_detail>=total_operations_per_detail) {
 				// wait for last worker to continue
 				if (finished_operations_per_detail<total_operations_per_detail) {
-					pthread_cond_wait(&cond, &lock);
+					pthread_cond_wait(&cond, &general_lock);
 				}
 				// last worker finished all operations
 				else {
@@ -127,21 +127,21 @@ public:
 					}
 					pthread_cond_broadcast(&cond);
 					pthread_cond_broadcast(&cond_operations);
-					pthread_mutex_unlock(&lock);
+					pthread_mutex_unlock(&general_lock);
 					continue;
 				}
 			}
 			// wait for any realesed worker to continue
 			else {
-				pthread_cond_wait(&cond_operations, &lock);
+				pthread_cond_wait(&cond_operations, &general_lock);
 			}
-			pthread_mutex_unlock(&lock);
+			pthread_mutex_unlock(&general_lock);
 		}
 		std::println("Worker {} finished.", worker_id);
 	}
 };
 
-pthread_mutex_t Work::lock;
+pthread_mutex_t Work::general_lock;
 std::size_t Work::current_detail_idx;
 std::vector<std::shared_ptr<Detail>> Work::details;
 std::size_t Work::num_details;
