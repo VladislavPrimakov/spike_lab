@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 4.0.0)
+project("Spike_Lab" LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_CXX_FLAGS "-stdlib=libc++")
+
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_C_COMPILER clang)
+add_compile_definitions(_POSIX_C_SOURCE=200809L _GNU_SOURCE)
+
+file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/*.c" "${CMAKE_SOURCE_DIR}/*.cpp")
+list(FILTER SOURCES EXCLUDE REGEX "/out/")
+
+foreach(SOURCE_FILE ${SOURCES})
+    get_filename_component(TARGET_NAME ${SOURCE_FILE} NAME_WE)
+    add_executable(${TARGET_NAME} ${SOURCE_FILE})
+endforeach()
+
