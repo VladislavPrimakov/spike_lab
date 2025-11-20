@@ -77,8 +77,9 @@ public:
 			d->workers_started++;
 			std::println("Worker {} took [{}] for {} ({}/{})", worker_id, d->s_tool, d->s_detail, d->workers_started, d->details_needed);
 			pthread_mutex_unlock(&d->lock);
+			std::println("Worker {} [{}] STARTED DOING work", worker_id, d->s_tool);
 			usleep(200000); // 200ms
-			std::println("Worker {} [{}] IS DOING work", worker_id, d->s_tool);
+			std::println("Worker {} [{}] FINISHED DOING work", worker_id, d->s_tool);
 			pthread_mutex_lock(&d->lock);
 			d->workers_finished++;
 			if (d->workers_finished>=d->details_needed) {
