@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0.0)
+cmake_minimum_required(VERSION 3.20)
 project("Spike_Lab" LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -11,7 +11,6 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_C_COMPILER clang)
-add_compile_definitions(_POSIX_C_SOURCE=200809L _GNU_SOURCE)
 
 file(GLOB_RECURSE SOURCES "${CMAKE_SOURCE_DIR}/*.c" "${CMAKE_SOURCE_DIR}/*.cpp")
 list(FILTER SOURCES EXCLUDE REGEX "/out/")
