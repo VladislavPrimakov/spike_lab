@@ -18,17 +18,15 @@ class Detail {
 	friend class Work;
 	pthread_mutex_t lock;
 	std::size_t details_done=0;
-	std::size_t workers_current=0;
 	std::size_t workers_started=0;
 	std::size_t workers_finished=0;
 	std::size_t details_needed;
-	std::size_t workers_needed;
 	std::string s_tool;
 	std::string s_detail;
 
 public:
-	Detail(std::size_t d_needed, std::size_t w_needed, const std::string& s_t, const std::string& s_d) : details_needed(d_needed),
-		workers_needed(w_needed), s_tool(s_t), s_detail(s_d) {
+	Detail(std::size_t d_needed, const std::string& s_t, const std::string& s_d) :
+		details_needed(d_needed), s_tool(s_t), s_detail(s_d) {
 		pthread_mutex_init(&lock, NULL);
 	}
 };
@@ -59,7 +57,7 @@ public:
 		started_operations_per_detail=0;
 		finished_operations_per_detail=0;
 		for (auto& d:details) {
-			total_operations_per_detail+=d->workers_needed*d->details_needed;
+			total_operations_per_detail+=d->details_needed;
 		}
 	}
 
@@ -73,23 +71,21 @@ public:
 			pthread_mutex_unlock(&d->lock);
 			return false;
 		}
-		if (d->workers_started<d->workers_needed) {
+		if (d->workers_started<d->details_needed) {
 			started_operations_per_detail++;
 			pthread_mutex_unlock(&lock);
-			d->workers_current++;
 			d->workers_started++;
-			std::println("Worker {} took [{}] for {} ({}/{})", worker_id, d->s_tool, d->s_detail, d->workers_started, d->workers_needed);
+			std::println("Worker {} took [{}] for {} ({}/{})", worker_id, d->s_tool, d->s_detail, d->workers_started, d->details_needed);
 			pthread_mutex_unlock(&d->lock);
 			usleep(200000); // 200ms
 			std::println("Worker {} [{}] IS DOING work", worker_id, d->s_tool);
 			pthread_mutex_lock(&d->lock);
-			d->workers_current--;
 			d->workers_finished++;
-			if (d->workers_finished>=d->workers_needed) {
+			if (d->workers_finished>=d->details_needed) {
 				d->details_done++;
 				d->workers_started=0;
 				d->workers_finished=0;
-				std::println(">>> TEAM FINISHED: {} (Progress: {}/{})", d->s_detail, d->details_done, d->details_needed);
+				std::println(">>> DETAIL FINISHED: {}", d->s_detail);
 			}
 			pthread_mutex_unlock(&d->lock);
 			return true;
@@ -107,7 +103,7 @@ public:
 				break;
 			}
 			for (auto& d:details) {
-				// if return true, unlocked (lock)
+				// if return true, unlocked (lock). else locked (lock)
 				if (try_work(d)) {
 					pthread_mutex_lock(&lock);
 					finished_operations_per_detail++;
@@ -115,7 +111,6 @@ public:
 					break;
 				}
 			}
-
 			if (started_operations_per_detail>=total_operations_per_detail) {
 				// wait for last worker to continue
 				if (finished_operations_per_detail<total_operations_per_detail) {
@@ -163,8 +158,8 @@ void* run(void*) {
 }
 
 int main() {
-	auto bolts=std::make_shared<Detail>(2, 2, "WRENCH", "BOLTS");
-	auto screw=std::make_shared<Detail>(1, 1, "SCREWDRIVER", "SCREW");
+	auto bolts=std::make_shared<Detail>(2, "WRENCH", "BOLTS");
+	auto screw=std::make_shared<Detail>(1, "SCREWDRIVER", "SCREW");
 	std::vector<std::shared_ptr<Detail>> details_list={bolts, screw};
 	const int num_details=3;
 	const int num_workers=3;
