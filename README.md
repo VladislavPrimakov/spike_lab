@@ -55,7 +55,4 @@ cmake --preset linux-debug
 
 # 2. Compilation
 cmake --build --preset linux-debug
-
-# 3. Compile all targets
-ninja
 ```
